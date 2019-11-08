@@ -1,15 +1,11 @@
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
 #include <iostream>
 #include <fstream>
+#include <string.h>
+#include <stdio.h>
+#include <openssl/evp.h>
 
 using namespace std;
 
-void handleErrors(void)
-{
-    ERR_print_errors_fp(stderr);
-    abort();
-}
 
 int main(int argc, char *argv[])
 {
@@ -20,20 +16,26 @@ int main(int argc, char *argv[])
    }
 
    //Loading the encyrpted session key and determining length
-   ifstream input(argv[3]);
-   string encrypted_k( (istreambuf_iterator<char>(input) ), (istreambuf_iterator<char>()    ) );
-   unsigned char* ek = (unsigned char*)encrypted_k;
-   int eklen = encyrpted_k.length();
+   ifstream encrypted_k_input(argv[3]);
+   string encrypted_k( (istreambuf_iterator<char>(encrypted_k_input) ), (istreambuf_iterator<char>()    ) );
+   size_t eklen = encrypted_k.length();
+   const unsigned char* ek = reinterpret_cast<const unsigned char *> (encrypted_k.c_str());
 
    //Loading the public key used for decryption
-   input = argv[4];
-   string public_k( (istreambuf_iterator<char>(input) ), (istreambuf_iterator<char>()    ) );
-   unsigned char* publicKey = (unsigned char*)public_k;
+   ifstream public_k_input(argv[3]);
+   string public_k( (istreambuf_iterator<char>(public_k_input) ), (istreambuf_iterator<char>()    ) );
+   const char* publicKey = public_k.c_str();
+   EVP_PKEY* key;
+   size_t keylen;
+   key = EVP_PKEY_new_raw_public_key(NULL, NULL, publicKey, keylen);
 
-   unsigned char *iv = (unsigned char *) malloc(EVP_MAX_IV_LENGTH);
    // initialize decrypt context
-   EVP_CIPHER_CTX *rsaDecryptCtx = (EVP_CIPHER_CTX *) malloc(sizeof(EVP_CIPHER_CTX));
-   EVP_CIPHER_CTX_init(rsaDecryptCtx);
+   EVP_PKEY_CTX* ctx;
 
-   EVP_OpenInit(rsaDecryptCtx, EVP_des_cbc(), ek, ekLen, iv, publicKey);
+   ctx = EVP_PKEY_CTX_new(key, NULL);
+
+   int s = EVP_PKEY_decrypt_init(ctx);
+   unsigned char *out = NULL;
+   size_t* outlen;
+   int d = EVP_PKEY_decrypt(ctx, out, outlen, ek, eklen);
 }
