@@ -3,17 +3,19 @@
 #include <string.h>
 #include <stdio.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/err.h>
 
 using namespace std;
 
 
 int main(int argc, char *argv[])
 {
-   if (argc != 5)
-   {
-      cout << "Invalid amount of arguments \n";
-      abort();
-   }
+   // if (argc != 5)
+   // {
+   //    cout << "Invalid amount of arguments \n";
+   //    abort();
+   // }
 
    //Loading the encyrpted session key and determining length
    ifstream encrypted_k_input(argv[3]);
@@ -21,21 +23,30 @@ int main(int argc, char *argv[])
    size_t eklen = encrypted_k.length();
    const unsigned char* ek = reinterpret_cast<const unsigned char *> (encrypted_k.c_str());
 
-   //Loading the public key used for decryption
-   ifstream public_k_input(argv[3]);
-   string public_k( (istreambuf_iterator<char>(public_k_input) ), (istreambuf_iterator<char>()    ) );
-   const char* publicKey = public_k.c_str();
-   EVP_PKEY* key;
-   size_t keylen;
-   key = EVP_PKEY_new_raw_public_key(NULL, NULL, publicKey, keylen);
+   EVP_PKEY* pPubKey  = NULL;
+   FILE*     pFile    = NULL;
 
-   // initialize decrypt context
-   EVP_PKEY_CTX* ctx;
+   pPubKey = NULL;
+   if((pFile = fopen("TPpubkey.pem","rt")) && (pPubKey = PEM_read_PUBKEY(pFile,NULL,NULL,NULL)))
+   {
+      fprintf(stderr,"Public key read.\n");
+   }
+   else
+   {
+      fprintf(stderr,"Cannot read \"pubkey.pem\".\n");
+   }
 
-   ctx = EVP_PKEY_CTX_new(key, NULL);
+   EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new(pPubKey, NULL);
 
-   int s = EVP_PKEY_decrypt_init(ctx);
-   unsigned char *out = NULL;
-   size_t* outlen;
-   int d = EVP_PKEY_decrypt(ctx, out, outlen, ek, eklen);
+   EVP_PKEY_decrypt_init(ctx);
+   unsigned char * out = NULL;
+   size_t* outlen = NULL;
+   if (!(1 == EVP_PKEY_decrypt(ctx, NULL, NULL, ek, eklen)))
+   {
+      fprintf(stderr, "Decryption Failure");
+   }
+   else
+   {
+      fprintf(stderr, "Decryption succeeded");
+   }
 }
