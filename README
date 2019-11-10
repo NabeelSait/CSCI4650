@@ -1,0 +1,7 @@
+Compilation instructions:
+
+On command line, type (for example) g++ libssl_directory -o part2 part2.cpp -lssl
+
+For Linux lab computers, the libssl_directory is /usr/lib64/libcrypto.so.1.1
+
+For hopper, directory is /usr/lib64/libcrypto.so.10
