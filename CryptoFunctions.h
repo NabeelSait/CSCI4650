@@ -18,8 +18,6 @@ using namespace std;
 #ifndef CRYPTO_FUNCTIONS_H
 #define CRYPTO_FUNCTIONS_H
 
-string base64_encode(unsigned char* bytes_to_encode, size_t in_len);
-
 int DESencrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
             unsigned char *iv, unsigned char *ciphertext);
 
@@ -28,13 +26,9 @@ int DESdecrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key
 
 void FiletoChar(const char* filename, size_t size, unsigned char* c, size_t* clen);
 
-void Chartob64File(unsigned char* out, size_t size, string filename);
-
 void ChartoFile(unsigned char* out, size_t size, const char* filename);
 
 size_t getFileByteSize(const char* filename);
-
-RSA * createRSA(unsigned char * key);
 
 int public_decrypt(unsigned char * enc_data, int data_len, const char* filename, unsigned char *decrypted);
 
@@ -44,7 +38,7 @@ void EnvelopeOpen(const char* ek_file, const char* TPpubkey, unsigned char* plai
 
 void SignPlaintext(unsigned char* plaintext, size_t p_len, const char* TPprivkey);
 
-void DecryptPlaintext(const char* c_file, const char* sk_file);
+void DecryptPlaintext(const char* c_file, const char* sk_file, const char* iv_file);
 
 void VerifySign(const char* p_file, const char* s_file, const char* pk_file);
 

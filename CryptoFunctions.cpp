@@ -16,56 +16,8 @@
 
 using namespace std;
 
-string base64_encode(unsigned char* bytes_to_encode, size_t in_len) {
-
-  string base64_chars =
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
-
-  string ret;
-  int i = 0;
-  int j = 0;
-  unsigned char char_array_3[3];
-  unsigned char char_array_4[4];
-
-  while (in_len--) {
-    char_array_3[i++] = *(bytes_to_encode++);
-    if (i == 3) {
-      char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-      char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-      char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-      char_array_4[3] = char_array_3[2] & 0x3f;
-
-      for(i = 0; (i <4) ; i++)
-        ret += base64_chars[char_array_4[i]];
-      i = 0;
-    }
-  }
-
-  if (i)
-  {
-    for(j = i; j < 3; j++)
-      char_array_3[j] = '\0';
-
-    char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-    char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-    char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
-    char_array_4[3] = char_array_3[2] & 0x3f;
-
-    for (j = 0; (j < i + 1); j++)
-      ret += base64_chars[char_array_4[j]];
-
-    while((i++ < 3))
-      ret += '=';
-
-  }
-
-  return ret;
-}
-
 int DESencrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
-            unsigned char *iv, unsigned char *ciphertext)
+            unsigned char *ciphertext)
 {
     EVP_CIPHER_CTX *ctx;
 
@@ -73,13 +25,23 @@ int DESencrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
 
     int ciphertext_len;
 
+    //IV Generation
+    unsigned char iv[64];
+    if(!(RAND_bytes(iv, 64)))
+    {
+      fprintf(stderr, "IV generation error");
+    }
+
+    cout << sizeof(iv) << "\n";
+    ChartoFile(iv, 64, "IV.txt");
+
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         fprintf(stderr, "Ctx Faliure");
 
     cout << "CTX succeeded" << "\n";
 
-    if(1 != EVP_EncryptInit_ex(ctx, EVP_des_cfb(), NULL, key, iv))
+    if(1 != EVP_EncryptInit_ex(ctx, EVP_des_cbc(), NULL, key, iv))
         fprintf(stderr, "Intitiation Faliure");
 
     cout << "Initiation Succeeded" << "\n";
@@ -109,7 +71,7 @@ int DESencrypt(unsigned char *plaintext, int plaintext_len, unsigned char *key,
 }
 
 int DESdecrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key,
-            unsigned char *iv, unsigned char *plaintext)
+            unsigned char* iv, unsigned char *plaintext)
 {
     EVP_CIPHER_CTX *ctx;
 
@@ -133,7 +95,7 @@ int DESdecrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key
      * IV size for *most* modes is the same as the block size. For AES this
      * is 128 bits
      */
-    if(1 != EVP_DecryptInit_ex(ctx, EVP_des_cfb(), NULL, key, iv))
+    if(1 != EVP_DecryptInit_ex(ctx, EVP_des_cbc(), NULL, key, iv))
     {
         cout << "Initiation Failed \n";
     }
@@ -181,13 +143,13 @@ void FiletoChar(const char* filename, size_t size, unsigned char* c, size_t* cle
    fclose(file);
 }
 
-void Chartob64File(unsigned char* out, size_t size, string filename)
-{
-   string s = base64_encode(out, size);
-   ofstream file(filename.c_str());
-   file << s;
-   file.close();
-}
+// void Chartob64File(unsigned char* out, size_t size, string filename)
+// {
+//    string s = base64_encode(out, size);
+//    ofstream file(filename.c_str());
+//    file << s;
+//    file.close();
+// }
 
 void ChartoFile(unsigned char* out, size_t size, const char* filename)
 {
@@ -211,24 +173,24 @@ size_t getFileByteSize(const char* filename)
    return size;
 }
 
-RSA * createRSA(unsigned char * key)
-{
-    RSA *rsa= NULL;
-    BIO *keybio ;
-    keybio = BIO_new_mem_buf(key, -1);
-    if (keybio==NULL)
-    {
-        printf( "Failed to create key BIO");
-    }
-
-    rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa,NULL, NULL);
-    if(rsa == NULL)
-    {
-        printf( "Failed to create RSA");
-    }
-
-    return rsa;
-}
+// RSA * createRSA(unsigned char * key)
+// {
+//     RSA *rsa= NULL;
+//     BIO *keybio ;
+//     keybio = BIO_new_mem_buf(key, -1);
+//     if (keybio==NULL)
+//     {
+//         printf( "Failed to create key BIO");
+//     }
+//
+//     rsa = PEM_read_bio_RSA_PUBKEY(keybio, &rsa,NULL, NULL);
+//     if(rsa == NULL)
+//     {
+//         printf( "Failed to create RSA");
+//     }
+//
+//     return rsa;
+// }
 
 int public_decrypt(unsigned char * enc_data, int data_len, const char* filename, unsigned char *decrypted)
 {
@@ -314,15 +276,14 @@ void EnvelopeOpen(const char* ek_file, const char* TPpubkey, unsigned char* plai
 
    size_t outlen = public_decrypt(ek, eklen, TPpubkey, out);
 
-   ChartoFile(out, outlen, "test_key.key");
-   Chartob64File(out, outlen, "test_key.txt");
+   ChartoFile(out, outlen, "session_key.key");
 
    cout << "Decryption Success \n";
 
    unsigned char ciphertext[4098]={};
 
    ChartoFile(plaintext, p_len, "test.txt");
-   DESencrypt(plaintext, p_len, out, NULL, ciphertext);
+   DESencrypt(plaintext, p_len, out, ciphertext);
    cout << "Encryption Success \n";
    size_t c_len = strlen ((char*)ciphertext);
    ChartoFile(ciphertext, c_len, "ciphertext.txt");
@@ -330,12 +291,12 @@ void EnvelopeOpen(const char* ek_file, const char* TPpubkey, unsigned char* plai
    free(ek);
 }
 
-void SignPlaintext(unsigned char* plaintext, size_t p_len, const char* TPprivkey)
+void SignPlaintext(unsigned char* plaintext, size_t p_len, const char* pk_file)
 {
    EVP_PKEY* pPrivKey;
    FILE* pFile;
 
-   if((pFile = fopen("privkey.pem","rt")) && (pPrivKey = PEM_read_PrivateKey(pFile,NULL,NULL,NULL)))
+   if((pFile = fopen(pk_file,"rt")) && (pPrivKey = PEM_read_PrivateKey(pFile,NULL,NULL,NULL)))
    {
       fprintf(stderr,"Private key read.\n");
    }
@@ -399,13 +360,12 @@ void SignPlaintext(unsigned char* plaintext, size_t p_len, const char* TPprivkey
     /* Clean up */
    if(mdctx) EVP_MD_CTX_destroy(mdctx);
 
-   Chartob64File(sig, s_len, "signature.txt");
-   ChartoFile(sig, s_len, "binary_signature.txt");
+   ChartoFile(sig, s_len, "signature.txt");
    free(sig);
    EVP_PKEY_free(pPrivKey);
 }
 
-void DecryptPlaintext(const char* c_file, const char* sk_file)
+void DecryptPlaintext(const char* c_file, const char* sk_file, const char* iv_file)
 {
    size_t size = getFileByteSize(c_file);
    unsigned char* ciphertext = (unsigned char *) malloc(size);
@@ -431,7 +391,18 @@ void DecryptPlaintext(const char* c_file, const char* sk_file)
    cout << keylen << "\n";
    unsigned char plaintext[c_len];
 
-   size_t p_len = DESdecrypt(ciphertext, c_len, key, NULL, plaintext);
+   unsigned char iv[64];
+   size_t ivlen;
+   FiletoChar(iv_file, 64, iv, &ivlen);
+
+
+   if (!(ivlen == 64))
+      cout << "IV loading failed \n";
+   else
+      cout << "IV loaded Successfully! \n";
+   cout << ivlen << "\n";
+
+   size_t p_len = DESdecrypt(ciphertext, c_len, key, iv, plaintext);
 
    plaintext[p_len] = '\0';
 
